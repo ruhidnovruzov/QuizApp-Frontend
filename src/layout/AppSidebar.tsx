@@ -40,6 +40,7 @@ const adminNavItems: NavItem[] = [
   { icon: <BookCopy />, name: "Fənnlər", path: "/admin/subjects" },
   { icon: <User />, name: "İstifadəçilər", path: "/admin/users" },
   { icon: <FileQuestion />, name: "Quizlər", path: "/quizzes" },
+  {}
 ];
 
 // --- 2. TEACHER Naviqasiya Elementləri (Sizin təklifiniz əsasında) ---

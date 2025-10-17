@@ -1,11 +1,11 @@
-// src/pages/UserPage.tsx (YENİLƏNMİŞ VERSİYA - Qrup ID/Name məntiqi ilə)
+// src/pages/UserPage.tsx (RESPONSIVE VERSION)
 
 import React, { useState, useEffect } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
-// Qeyd: Sizdəki path DepartmentModal-a aiddir. UserModal üçün düzəldirəm.
 import UserModal from "../../components/ui/modal/UserModal";
 import { get, del } from "../../api/service"; 
-import { SquarePen, Trash2, PlusCircle, Loader2, User as UserIcon } from "lucide-react"; 
+// Əlavə ikonlar import edilir
+import { SquarePen, Trash2, PlusCircle, Loader2, User as UserIcon, Mail, Tag, Hash, Shield } from "lucide-react"; 
 import Swal from 'sweetalert2';
 
 
@@ -43,7 +43,8 @@ const UserPage: React.FC = () => {
     // --- Məlumatların çəkilməsi və Birləşdirilməsi ---
     const fetchData = async () => {
         setLoading(true);
-        setGroupsLoading(true);
+        // Grupları çəkilənə qədər loading göstəririk, çünki modalda istifadə olunur
+        if (groups.length === 0) setGroupsLoading(true); 
         setError(null);
 
         try {
@@ -127,7 +128,6 @@ const UserPage: React.FC = () => {
     };
     
     const openEditModal = (user: User) => {
-        // fetchData sayəsində user obyektində group_id artıq var.
         setSelectedUser(user); 
         setIsModalOpen(true);
     };
@@ -138,6 +138,83 @@ const UserPage: React.FC = () => {
     };
     
     
+    // Role əsaslı rəngləmə funksiyası (UI üçün)
+    const getRoleBadge = (role: string) => {
+        let color = 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+        if (role === 'Admin') color = 'bg-red-200 text-red-800 dark:bg-red-800/30 dark:text-red-300';
+        else if (role === 'Teacher') color = 'bg-blue-200 text-blue-800 dark:bg-blue-800/30 dark:text-blue-300';
+        else if (role === 'Student') color = 'bg-green-200 text-green-800 dark:bg-green-800/30 dark:text-green-300';
+
+        return <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>{role}</span>;
+    };
+    
+    
+    // --- Mobil/Kart Görünüşü Komponenti ---
+    const MobileUserCard: React.FC<{ user: User }> = ({ user }) => (
+        <div key={user.id} className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-4 mb-3 border border-gray-200 dark:border-gray-700">
+            
+            {/* Ad Soyad və ID */}
+            <div className="flex justify-between items-center mb-3 border-b pb-2 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                    <UserIcon className="w-5 h-5 mr-2 text-indigo-500" />
+                    {user.first_name} {user.last_name}
+                </h3>
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center">
+                    <Hash className="w-3 h-3 mr-1" /> {user.id}
+                </span>
+            </div>
+
+            {/* Əsas Məlumatlar */}
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 mb-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                        <Mail className="w-4 h-4 mr-2 text-gray-500" />
+                        <span className="font-medium">Email:</span>
+                    </div>
+                    <span className="ml-2 font-medium break-all">{user.email}</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                        <Shield className="w-4 h-4 mr-2 text-red-500" />
+                        <span className="font-medium">Rol:</span>
+                    </div>
+                    {getRoleBadge(user.role)}
+                </div>
+                
+                {user.role === 'Student' && (
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                            <span className="font-medium">Qrup:</span>
+                        </div>
+                        <span className="ml-2">{user.group_name || 'Qeyd edilməyib'}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Əməliyyatlar */}
+            <div className="flex justify-end space-x-3 pt-3 border-t dark:border-gray-700">
+                <button 
+                    onClick={() => openEditModal(user)} 
+                    className="font-medium text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 inline-flex items-center transition duration-150"
+                    title="Redaktə et"
+                >
+                    <SquarePen className="w-4 h-4 mr-1" /> Redaktə
+                </button>
+                <button
+                    onClick={() => handleDelete(user.id, `${user.first_name} ${user.last_name}`)}
+                    className="font-medium text-red-600 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 inline-flex items-center transition duration-150"
+                    title="Sil"
+                >
+                    <Trash2 className="w-4 h-4 mr-1" /> Sil
+                </button>
+            </div>
+        </div>
+    );
+    // ---------------------------------------------
+
+    
     // --- Render Məntiqi ---
     if (loading && users.length === 0) {
         return <div className="flex justify-center items-center h-48 text-lg text-gray-700 dark:text-gray-400"><Loader2 className="animate-spin mr-2" /> İstifadəçilər yüklənir...</div>;
@@ -146,16 +223,6 @@ const UserPage: React.FC = () => {
     if (error) {
          return <div className="text-red-600 p-4 bg-red-100 rounded-lg">{error}</div>;
     }
-
-    // Role əsaslı rəngləmə funksiyası (UI üçün)
-    const getRoleBadge = (role: string) => {
-        let color = 'bg-gray-200 text-gray-800';
-        if (role === 'Admin') color = 'bg-red-200 text-red-800';
-        else if (role === 'Teacher') color = 'bg-blue-200 text-blue-800';
-        else if (role === 'Student') color = 'bg-green-200 text-green-800';
-
-        return <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${color}`}>{role}</span>;
-    };
 
 
     return (
@@ -173,7 +240,8 @@ const UserPage: React.FC = () => {
                 </button>
             </div>
 
-            <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+            {/* --- 1. DESKTOP CƏDVƏL GÖRÜNÜŞÜ (Mobil ekranlarda gizlət) --- */}
+            <div className="hidden md:block relative overflow-x-auto shadow-md sm:rounded-lg">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                     <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
@@ -226,13 +294,25 @@ const UserPage: React.FC = () => {
                 )}
             </div>
             
+            {/* --- 2. MOBİL KART GÖRÜNÜŞÜ (Yalnız mobil ekranlarda göstər - md və ondan yuxarıda gizlət) --- */}
+            <div className="md:hidden">
+                {users.map((user) => (
+                    <MobileUserCard key={user.id} user={user} />
+                ))}
+                {users.length === 0 && !loading && (
+                    <div className="p-6 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                        Heç bir istifadəçi tapılmadı.
+                    </div>
+                )}
+            </div>
+            
             {/* Modal Komponenti */}
             <UserModal
                 isOpen={isModalOpen}
                 onClose={closeModal}
                 currentUser={selectedUser}
                 onSuccess={fetchData} 
-                groups={groups} // Qrupları modala göndəririk
+                groups={groups} 
             />
         </>
     );

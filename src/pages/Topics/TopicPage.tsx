@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import SubjectModal from "../../components/ui/modal/SubjectModal";
 import { get, del } from "../../api/service";
-import { SquarePen, Trash2, PlusCircle, Loader2, BookOpen, User } from "lucide-react";
+// Yeni ikonlar əlavə edildi
+import { SquarePen, Trash2, PlusCircle, Loader2, BookOpen, User, Tag, Building2, Hash, Users } from "lucide-react"; 
 import Swal from 'sweetalert2';
 
 // Fərz edirik ki, bu, sizin AuthContext-inizdən gəlir
@@ -31,11 +32,9 @@ interface Teacher { id: number; first_name: string; last_name: string; }
 
 
 const SubjectPage: React.FC = () => {
-    // useAuth hook-dan cari rolu alırıq
     const { role } = useAuth();
     const isAdmin = role === 'Admin';
     const isTeacher = role === 'Teacher';
-    // isStudent əlavə etmək lazım deyil, çünki bu səhifə Admin və Teacher üçündür.
 
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [groups, setGroups] = useState<Group[]>([]);
@@ -49,11 +48,10 @@ const SubjectPage: React.FC = () => {
     const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
 
     // --- 1. Məlumatları API-dən yüklə (Fənlər) ---
-    const fetchData = async () => {
+    const fetchSubjects = async () => {
         setLoading(true);
         try {
-            // Rola görə endpoint-i dinamik seçirik
-            const endpoint = isTeacher ? '/subjects' : '/subjects';
+            const endpoint = '/subjects'; 
             
             const response = await get(endpoint);
             setSubjects(response.data);
@@ -68,10 +66,12 @@ const SubjectPage: React.FC = () => {
         }
     };
 
-    // Qrupları və Müəllimləri çəkən funksiya (Modal üçün yalnız Adminə lazımdır)
+    // Qrupları və Müəllimləri çəkən funksiya (Modal üçün)
     const fetchRefData = async () => {
-        // Yalnız Admin isə istinad məlumatlarını çəkirik
-        if (!isAdmin) return; 
+        // YALNIZ İLK DƏFƏ ÇƏKİLƏNDƏ SORĞU ATSIN
+        if ((groups.length > 0 && teachers.length > 0) || !isAdmin) {
+             return; 
+        }
 
         setRefDataLoading(true);
         try {
@@ -85,20 +85,15 @@ const SubjectPage: React.FC = () => {
 
         } catch (err: any) {
             console.error("Qrupları və Müəllimləri yükləmə xətası:", err); 
-            Swal.fire({
-                title: 'Xəta!',
-                text: "Qrupları və Müəllimləri yükləmək mümkün olmadı.",
-                icon: "error"
-            });
         } finally {
             setRefDataLoading(false);
         }
     };
 
+    // Səhifə yüklənəndə yalnız fənləri çəkirik.
     useEffect(() => {
-        fetchData();
-        fetchRefData();
-    }, [isAdmin, isTeacher]); // Rol dəyişəndə yenidən yüklə
+        fetchSubjects();
+    }, [isAdmin, isTeacher]); 
 
     // --- 2. DELETE (Fənni Sil) - Yalnız Admin icazəlidir ---
     const handleDelete = async (id: number, name: string) => {
@@ -123,7 +118,7 @@ const SubjectPage: React.FC = () => {
 
         try {
             await del(`/subjects/${id}`);
-            fetchData();
+            fetchSubjects();
 
             Swal.fire({ title: "Silindi!", text: "Fənn uğurla silindi.", icon: "success", timer: 2000, showConfirmButton: false });
 
@@ -135,15 +130,19 @@ const SubjectPage: React.FC = () => {
 
     // --- Modal Məntiqi ---
     const openCreateModal = () => {
-        if (!isAdmin) return; // Yalnız Admin icazəlidir
+        if (!isAdmin) return;
         setSelectedSubject(null);
         setIsModalOpen(true);
+        
+        fetchRefData();
     };
 
     const openEditModal = (subject: Subject) => {
-        if (!isAdmin) return; // Yalnız Admin icazəlidir
+        if (!isAdmin) return;
         setSelectedSubject(subject);
         setIsModalOpen(true);
+        
+        fetchRefData();
     };
 
     const closeModal = () => {
@@ -155,6 +154,67 @@ const SubjectPage: React.FC = () => {
     if (loading && subjects.length === 0) {
         return <div className="flex justify-center items-center h-48 text-lg text-gray-700 dark:text-gray-400"><Loader2 className="animate-spin mr-2" /> Fənlər yüklənir...</div>;
     }
+    
+    // --- Mobil/Kart Görünüşü Komponenti ---
+    const MobileSubjectCard: React.FC<{ subject: Subject }> = ({ subject }) => (
+        <div key={subject.id} className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-4 mb-4 border border-gray-200 dark:border-gray-700">
+            
+            {/* Başlıq və ID */}
+            <div className="flex justify-between items-start mb-3 border-b pb-2 dark:border-gray-700">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center">
+                    <BookOpen className="w-5 h-5 mr-2 text-indigo-500" />
+                    {subject.name}
+                </h3>
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 flex items-center mt-1 p-1 px-2 bg-gray-100 dark:bg-gray-700 rounded-full">
+                    <Hash className="w-3 h-3 mr-1" />
+                    ID: {subject.id}
+                </span>
+            </div>
+
+            {/* Əsas Məlumatlar */}
+            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300 mb-4">
+                <div className="flex items-center">
+                    <User className="w-4 h-4 mr-2 text-green-600" />
+                    <span className="font-medium">Müəllim:</span>
+                    <span className="ml-2 font-semibold">{subject.teacher.first_name} {subject.teacher.last_name}</span>
+                </div>
+                
+                <div className="flex items-center">
+                    <Tag className="w-4 h-4 mr-2 text-blue-500" />
+                    <span className="font-medium">Qrup:</span>
+                    <span className="ml-2">{subject.group?.name || 'Yoxdur'}</span>
+                </div>
+                
+                <div className="flex items-center">
+                    <Building2 className="w-4 h-4 mr-2 text-orange-500" />
+                    <span className="font-medium">Kafedra:</span>
+                    <span className="ml-2">{subject.group?.department?.name || 'Məlum deyil'}</span>
+                </div>
+            </div>
+
+            {/* Əməliyyatlar (Yalnız Admin üçün) */}
+            {isAdmin && (
+                <div className="flex justify-end space-x-3 pt-3 border-t dark:border-gray-700">
+                    <button 
+                        onClick={() => openEditModal(subject)} 
+                        className="font-medium text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 inline-flex items-center transition duration-150"
+                        title="Redaktə et"
+                    >
+                        <SquarePen className="w-4 h-4 mr-1" /> Redaktə
+                    </button>
+                    <button
+                        onClick={() => handleDelete(subject.id, subject.name)}
+                        className="font-medium text-red-600 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 inline-flex items-center transition duration-150"
+                        title="Sil"
+                    >
+                        <Trash2 className="w-4 h-4 mr-1" /> Sil
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+    // ---------------------------------------------
+
 
     return (
         <>
@@ -166,15 +226,15 @@ const SubjectPage: React.FC = () => {
                     <button
                         onClick={openCreateModal}
                         className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                        disabled={refDataLoading}
                     >
-                        {refDataLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <PlusCircle className="w-5 h-5 mr-2" />}
+                        <PlusCircle className="w-5 h-5 mr-2" />
                         Yeni Fənn Yarat
                     </button>
                 </div>
             )}
 
-            <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+            {/* --- 1. DESKTOP CƏDVƏL GÖRÜNÜŞÜ (Mobil ekranlarda gizlət) --- */}
+            <div className="hidden md:block relative overflow-x-auto shadow-md sm:rounded-lg">
                 <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                     <thead className="text-xs text-gray-700 uppercase bg-gray-100 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
@@ -241,16 +301,31 @@ const SubjectPage: React.FC = () => {
                 )}
             </div>
 
+            {/* --- 2. MOBİL KART GÖRÜNÜŞÜ (Yalnız mobil ekranlarda göstər - md və ondan yuxarıda gizlət) --- */}
+            <div className="md:hidden">
+                {subjects.map((subject) => (
+                    <MobileSubjectCard key={subject.id} subject={subject} />
+                ))}
+                {subjects.length === 0 && !loading && (
+                    <div className="p-6 text-center text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow-md">
+                        Heç bir fənn tapılmadı.
+                        {isTeacher && 'Sizə təyin olunmuş fənn yoxdur.'}
+                        {isAdmin && 'Yuxarıdakı düymədən yeni fənn yarada bilərsiniz.'}
+                    </div>
+                )}
+            </div>
+
             {/* Modal Komponenti - Yalnız Admin tərəfindən istifadə ediləcək */}
             {isAdmin && (
                 <SubjectModal
                     isOpen={isModalOpen}
                     onClose={closeModal}
                     currentSubject={selectedSubject}
-                    onSuccess={fetchData}
-                    groups={groups}
-                    teachers={teachers}
+                    onSuccess={fetchSubjects} 
+                    groups={groups} 
+                    teachers={teachers} 
                     isAdmin={isAdmin}
+                    refDataLoading={refDataLoading} 
                 />
             )}
         </>

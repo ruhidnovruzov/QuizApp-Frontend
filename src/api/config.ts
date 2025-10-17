@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://quizapp-backend-t2p2.onrender.com/api'; // Doğru format!
+const API_BASE_URL = 'http://localhost:5000/api'; // Doğru format!
 
 
 
